@@ -77,6 +77,9 @@ jobs:
      fail-fast: false
      matrix: 
        config: ${{ fromJson(needs.createstructure.outputs.accountsAndLayers ) }}
+   env:
+     IDP_SLACK_REPORT_DRIFT_URL: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
+     IDP_SLACK_REPORT_ERROR_URL: ${{ secrets.IDP_SLACK_REPORT_ERROR_URL }}
    steps:
      - name: Checkout code
        uses: actions/checkout@v4
@@ -187,7 +190,7 @@ jobs:
            })
      - name: Post plan to Slack
        uses: slackapi/slack-github-action@v2.0.0
-       if: github.event_name == 'schedule' && steps.create_plan.outputs.tofu_exitcode == 2 && secrets.IDP_SLACK_REPORT_DRIFT_URL != ""
+       if: github.event_name == 'schedule' && steps.create_plan.outputs.tofu_exitcode == 2 && env.IDP_SLACK_REPORT_DRIFT_URL != ""
        with:
          webhook: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
          webhook-type: webhook-trigger
@@ -198,11 +201,11 @@ jobs:
            details_url: "https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}"
   
      - name: Report missing slack config for drift
-       if: github.event_name == 'schedule' && steps.create_plan.outputs.tofu_exitcode == 2 && secrets.IDP_SLACK_REPORT_DRIFT_URL == ""
+       if: github.event_name == 'schedule' && steps.create_plan.outputs.tofu_exitcode == 2 && env.IDP_SLACK_REPORT_DRIFT_URL == ""
        run: echo "Drift detected during scheduled run, but Slack is not used as the IDP_SLACK_REPORT_DRIFT_URL is undefined or empty"
   
      - name: Report missing slack config for errors
-       if: steps.create_plan.outputs.tofu_exitcode == 1 && secrets.IDP_SLACK_REPORT_ERROR_URL == ""
+       if: steps.create_plan.outputs.tofu_exitcode == 1 && env.IDP_SLACK_REPORT_ERROR_URL == ""
        run: echo "Error generating plan, but Slack is not used as the IDP_SLACK_REPORT_ERROR_URL is undefined or empty"
   
      - name: Post errormessage to slack 
