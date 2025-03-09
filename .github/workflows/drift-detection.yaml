@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       role_to_assume:
-        required: true
+        required: false
         default: "idp-childaccount-github-action-role"
         type: string
     secrets:
