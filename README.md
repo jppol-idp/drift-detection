@@ -83,3 +83,71 @@ If a plan can be created for all account folders the workload `drift-detect-comp
 
 As this part of the action is only started if all folders validates ok, it can be integrated in branch rules 
 for pull requests etc. 
+
+# Github credentials 
+In IDP we have various situations where we need to modify github. 
+
+Credentials for this happens using the secrets below, which are passed to the workflow as secrets: 
+
+This set of credentials is used for authorizing the github provider. 
+```
+GH_MAIN_APP_ID
+GH_MAIN_APP_INSTALLATION_ID
+GH_MAIN_APP_PEM_CONTENTS
+```
+
+This set of credentials is inserted as values inside the clusters accounts and eventually passed to ArgoCD as access credentials. 
+```
+GH_APPS_REPO_APP_ID
+GH_APPS_REPO_APP_INSTALLATION_ID
+GH_APPS_REPO_PEM_CONTENTS
+```
+
+# Usage example 
+
+Below is an example illustrating how to use this workflow. 
+
+Scheduling of the workflow is of course the discretion of tha caller. 
+
+Note how secrets are passed from the invoking repository to the workflow.
+
+
+```
+name: drift-detect 
+run-name: Drift detect
+on: 
+  push:
+    branches:
+      - main
+      - prod
+      - test
+      - idp
+      - dev
+  workflow_dispatch:
+  pull_request:
+    type:
+      - ready_for_review
+      - edited
+
+  schedule:
+    - cron: '37 3 * * *'
+jobs:
+  run-drift-detect:
+    uses: jppol-idp/drift-detection/.github/workflows/drift-detection.yaml@main
+    secrets:
+      IDP_SLACK_REPORT_ERROR_URL: ${{ secrets.IDP_SLACK_REPORT_ERROR_URL }}
+      IDP_SLACK_REPORT_DRIFT_URL: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
+      # Used by argo to connect to apps repositories
+      GH_APPS_REPO_APP_ID: ${{ secrets.GH_APPS_REPO_APP_ID }}
+      # Used by argo to connect to apps repositories (installation id)
+      GH_APPS_REPO_APP_INSTALLATION_ID: ${{ secrets.GH_APPS_REPO_APP_INSTALLATION_ID }}
+      # Used by argo to connect to apps repositories (PEM contents)
+      GH_APPS_REPO_PEM_CONTENTS: ${{ secrets.GH_APPS_REPO_PEM_CONTENTS }}
+
+      # Github application client id used for connecting to github provider - must have at least access to evertyhing provisioned
+      GH_MAIN_APP_ID: ${{ secrets.GH_MAIN_APP_ID }}
+      # Github application installation id used for connecting to github provider - must have at least access to evertyhing provisioned
+      GH_MAIN_APP_INSTALLATION_ID: ${{ secrets.GH_MAIN_APP_INSTALLATION_ID }}
+      # Github pem file content for application connecting to github provider - must have at least access to evertyhing provisioned
+      GH_MAIN_APP_PEM_CONTENTS: ${{ secrets.GH_MAIN_APP_PEM_CONTENTS }}
+```
