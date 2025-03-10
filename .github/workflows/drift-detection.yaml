@@ -181,7 +181,7 @@ jobs:
          echo $text_plan >> $GITHUB_OUTPUT
          echo "TEXT_PLAN" >> $GITHUB_OUTPUT
          echo "text_plan_shortened<<TEXT_PLAN" >> $GITHUB_OUTPUT
-         echo text_plan_shortened >> $GITHUB_OUTPUT
+         echo $text_plan_shortened >> $GITHUB_OUTPUT
          echo "TEXT_PLAN" >> $GITHUB_OUTPUT
   
      - name: Archive binary plan
