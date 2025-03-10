@@ -12,8 +12,19 @@ on:
         required: true
       IDP_SLACK_REPORT_DRIFT_URL:
         required: true
+      # Used by argo to connect to apps repositories
+      GH_APPS_REPO_APP_ID:
+      # Used by argo to connect to apps repositories (installation id)
+      GH_APPS_REPO_APP_INSTALLATION_ID:
+      # Used by argo to connect to apps repositories (PEM contents)
+      GH_APPS_REPO_PEM_CONTENTS:
 
-  
+      # Github application client id used for connecting to github provider - must have at least access to evertyhing provisioned
+      GH_MAIN_APP_ID:
+      # Github application installation id used for connecting to github provider - must have at least access to evertyhing provisioned
+      GH_MAIN_APP_INSTALLATION_ID:
+      # Github pem file content for application connecting to github provider - must have at least access to evertyhing provisioned
+      GH_MAIN_APP_PEM_CONTENTS:
 
 jobs:
   report-startup:
