@@ -134,6 +134,11 @@ on:
 jobs:
   run-drift-detect:
     uses: jppol-idp/drift-detection/.github/workflows/drift-detection.yaml@main
+    permissions:
+      id-token: write
+      pull-requests: write
+      contents: read
+      packages: read
     secrets:
       IDP_SLACK_REPORT_ERROR_URL: ${{ secrets.IDP_SLACK_REPORT_ERROR_URL }}
       IDP_SLACK_REPORT_DRIFT_URL: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
