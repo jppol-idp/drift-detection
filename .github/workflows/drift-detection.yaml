@@ -167,11 +167,21 @@ jobs:
          tofu show -no-color plan.tmp > plan.txt
          text_plan_slack=$(cat plan.txt |sed "s/\"/\\\\\"/g" |sed "s/\(.*\)/\1 \\\\n/g" |sed "s/    /\\\\t/g"| sed "s/ /\\\\u00A0/g" |tail -c 1500 )
          text_plan=$(cat plan.txt |sed "s/\(.*\)/\1 \\\\n/g" | sed "s/ /\\\\u00A0/g" )
+         if [ ${#text_plan} -gt 2000 ]; then
+           first_part="${text_plan:0:800}"
+           last_part="${text_plan: -800}"
+           text_plan_shortened="${first_part}\n...\n${last_part}"
+         else
+           text_plan_shortened=$text_plan
+         fi
          echo "text_plan_slack<<TEXT_PLAN_SLACK" >> $GITHUB_OUTPUT
          echo $text_plan_slack >> $GITHUB_OUTPUT
          echo "TEXT_PLAN_SLACK" >> $GITHUB_OUTPUT
          echo "text_plan<<TEXT_PLAN" >> $GITHUB_OUTPUT
          echo $text_plan >> $GITHUB_OUTPUT
+         echo "TEXT_PLAN" >> $GITHUB_OUTPUT
+         echo "shortened_text_plan<<TEXT_PLAN" >> $GITHUB_OUTPUT
+         echo text_plan_shortened >> $GITHUB_OUTPUT
          echo "TEXT_PLAN" >> $GITHUB_OUTPUT
   
      - name: Archive binary plan
