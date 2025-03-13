@@ -172,7 +172,7 @@ jobs:
          if [ ${#text_plan} -gt 2000 ]; then
            first_part="${text_plan:0:800}"
            last_part="${text_plan: -800}"
-           text_plan_shortened="${first_part}\n\n...\n\n${last_part}"
+           text_plan_shortened="${first_part}\n\n...\n\n ${last_part}"
          else
            text_plan_shortened=$text_plan
          fi
