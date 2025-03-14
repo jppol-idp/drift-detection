@@ -168,7 +168,7 @@ jobs:
          # Double escape quotes. -> Enforce newlines everywhere -> Four spaces to tabs -> Spaces to NBSP uncode
          text_plan_slack=$(cat plan.txt |sed "s/\"/\\\\\"/g" |sed "s/\(.*\)/\1 \\\\n/g" |sed "s/    /\\\\t/g"| sed "s/ /\\\\u00A0/g" |tail -c 1500 )
          # Enforce newlines everywhere -> Four spaces to tabs -> Spaces to NBSP uncode
-         text_plan=$(cat plan.txt |sed "s/\(.*\)/\1 \\\\n/g" | sed "s/    /\t/g" | sed "s/ /\\\\u00A0/g"  )
+         text_plan=$(cat plan.txt |sed "s/\(.*\)/\1 \\\\n/g" )
          if [ ${#text_plan} -gt 2000 ]; then
            first_part="${text_plan:0:800}"
            last_part="${text_plan: -800}"
@@ -209,7 +209,7 @@ jobs:
              issue_number: context.issue.number,
              owner: context.repo.owner,
              repo: context.repo.repo,
-             body: 'Detected drift in ${{ steps.settings.outputs.workdir  }} \n ```${{ steps.create_human_readable_plan.outputs.text_plan_shortened  }}```'
+             body: 'Detected drift in ${{ steps.settings.outputs.workdir  }} \n ```hcl${{ steps.create_human_readable_plan.outputs.text_plan_shortened  }}``` \n details in https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}'
            })
      - name: Post plan to Slack
        uses: slackapi/slack-github-action@v2.0.0
