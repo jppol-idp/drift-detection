@@ -169,20 +169,13 @@ jobs:
          text_plan_slack=$(cat plan.txt |sed "s/\"/\\\\\"/g" |sed "s/\(.*\)/\1 \\\\n/g" |sed "s/    /\\\\t/g"| sed "s/ /\\\\u00A0/g" |tail -c 1500 )
          # Enforce newlines everywhere -> Four spaces to tabs -> Spaces to NBSP uncode
          text_plan=$(cat plan.txt |sed "s/\(.*\)/\1 \\\\n/g" )
-         if [ ${#text_plan} -gt 2000 ]; then
-           text_plan_shortened=$(echo $text_plan |grep "Plan:")
-         else
-           text_plan_shortened=$text_plan
-         fi
          echo "text_plan_slack<<TEXT_PLAN_SLACK" >> $GITHUB_OUTPUT
          echo $text_plan_slack >> $GITHUB_OUTPUT
          echo "TEXT_PLAN_SLACK" >> $GITHUB_OUTPUT
          echo "text_plan<<TEXT_PLAN" >> $GITHUB_OUTPUT
          echo $text_plan >> $GITHUB_OUTPUT
          echo "TEXT_PLAN" >> $GITHUB_OUTPUT
-         echo "text_plan_shortened<<TEXT_PLAN" >> $GITHUB_OUTPUT
-         echo $text_plan_shortened >> $GITHUB_OUTPUT
-         echo "TEXT_PLAN" >> $GITHUB_OUTPUT
+         tofu show -json ./plan.tmp >> ./planfile.json
   
      - name: Archive binary plan
        if: steps.create_plan.outputs.tofu_exitcode == 2
@@ -199,16 +192,11 @@ jobs:
          path: ${{ steps.settings.outputs.workdir }}/plan.txt
   
      - name: Comment on PR
-       uses: actions/github-script@v7
        if: github.event_name == 'pull_request' && steps.create_plan.outputs.tofu_exitcode == 2
+       uses: liatrio/terraform-change-pr-commenter@v1.4.0
        with:
-         script: |
-           github.rest.issues.createComment({
-             issue_number: context.issue.number,
-             owner: context.repo.owner,
-             repo: context.repo.repo,
-             body: 'Detected drift in ${{ steps.settings.outputs.workdir  }} \n ```hcl${{ steps.create_human_readable_plan.outputs.text_plan_shortened  }}``` \n details in https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}'
-           })
+         json-file: planfile.json
+
      - name: Post plan to Slack
        uses: slackapi/slack-github-action@v2.0.0
        if: github.event_name == 'schedule' && steps.create_plan.outputs.tofu_exitcode == 2 && env.IDP_SLACK_REPORT_DRIFT_URL != ''
