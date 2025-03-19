@@ -195,7 +195,7 @@ jobs:
        if: github.event_name == 'pull_request' && steps.create_plan.outputs.tofu_exitcode == 2
        uses: liatrio/terraform-change-pr-commenter@v1.4.0
        with:
-         json-file: planfile.json
+         json-file: ${{ steps.settings.outputs.workdir }}/planfile.json
 
      - name: Post plan to Slack
        uses: slackapi/slack-github-action@v2.0.0
