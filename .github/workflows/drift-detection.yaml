@@ -123,8 +123,8 @@ jobs:
        with:
          ref: ${{ steps.default_ref.outputs.refname }}
      - uses: opentofu/setup-opentofu@v1
-         with:
-           tofu_version: ${{ inputs.tofu_version }}
+       with:
+         tofu_version: ${{ inputs.tofu_version }}
      - name: Create tofu cache folder
        run: |
          mkdir -p .tofu-providers-cache
