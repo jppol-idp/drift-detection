@@ -77,14 +77,14 @@ jobs:
           echo "MATRIX=$DIRLIST" >> $GITHUB_OUTPUT
   drift-detect-completed:
    needs: display-environment
-   runs-on: ${{ inputs.runs_on }}
+   runs-on: ubuntu-24.04
    steps: 
      - name: everythin succeeded
        run: echo "All good!"
   
   display-environment: 
    name: "drift"
-   runs-on: ${{ inputs.runs_on }}
+   runs-on: ubuntu-24.04
    needs: createstructure 
    permissions:
      id-token: write
