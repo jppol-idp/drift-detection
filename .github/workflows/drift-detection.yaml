@@ -114,6 +114,7 @@ jobs:
            echo "No branch file found at $branchfile."
            echo "Using default branch: $selected_branch"
          fi
+         echo "Github event name: ${{ github.event_name }}"
          echo "Selected branch for drift detect: $selected_branch"
          echo "refname=$selected_branch" >> $GITHUB_OUTPUT
   
