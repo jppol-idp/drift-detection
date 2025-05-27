@@ -76,6 +76,7 @@ jobs:
           echo $DIRLIST
           echo "MATRIX=$DIRLIST" >> $GITHUB_OUTPUT
   drift-detect-completed:
+   name: "Drift detect success"
    needs: display-environment
    runs-on: ubuntu-24.04
    steps: 
