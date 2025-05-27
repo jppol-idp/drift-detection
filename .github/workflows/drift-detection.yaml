@@ -104,7 +104,7 @@ jobs:
        uses: actions/checkout@v4
   
      - name: Find default branch
-       if: github.event_name != 'workflow_dispatch' && github.event_name != 'pull_request'
+       if: github.event_name == 'schedule'
        id: default_ref
        run: |
          branchfile="infrastructure/accounts/${{ matrix.config.accountName  }}/${{ matrix.config.accountId }}/branch.txt"
