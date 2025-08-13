@@ -136,6 +136,7 @@ jobs:
     name: "drift"
     runs-on: ubuntu-24.04
     needs: createstructure 
+    if: ${{ needs.createstructure.outputs.accountsAndLayers != '' && needs.createstructure.outputs.accountsAndLayers != '[]' }}
     permissions:
       id-token: write
       contents: read
