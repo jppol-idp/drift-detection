@@ -163,11 +163,12 @@ jobs:
          TF_VAR_provider_github_app_pem: ${{ secrets.GH_MAIN_APP_PEM_CONTENTS }}
          TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.tofu-providers-cache
        run: |
-         set +e
-         cd ${{ steps.settings.outputs.workdir }}  && tofu init && tofu plan -out=plan.tmp --detailed-exitcode -lock-timeout=300s
+         cd ${{ steps.settings.outputs.workdir }}  
+         tofu init
+         tofu plan -out=plan.tmp --detailed-exitcode -lock-timeout=300s
          tofu_exitcode="$?"
          echo "tofu_exitcode=$tofu_exitcode" >> $GITHUB_OUTPUT
-         exit $tofu_exitcode
+         echo "tofu exit code was $tofu_exitcode"
   
      - name: Create human readable plan
        id: create_human_readable_plan
