@@ -163,10 +163,10 @@ jobs:
          TF_VAR_provider_github_app_pem: ${{ secrets.GH_MAIN_APP_PEM_CONTENTS }}
          TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.tofu-providers-cache
        run: |
+         set +e
          cd ${{ steps.settings.outputs.workdir }}
          tofu init  
-         set +e
-         tofu plan -out=plan.tmp --detailed-exitcode -lock-timeout=300s
+         tofu plan -out=plan.tmp -detailed-exitcode -lock-timeout=300s
          tofu_exitcode="$?"
          echo "tofu exitcode: $tofu_exitcode"
          echo "tofu_exitcode=$tofu_exitcode" >> $GITHUB_OUTPUT
