@@ -73,29 +73,26 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Determine base revision to diff against
-          DEFAULT_BASE="origin/main"
+          # Determine and fetch base branch to diff against
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # Use the PR base SHA if available; otherwise fetch the base ref name
-            if [ -n "${{ github.event.pull_request.base.sha || '' }}" ]; then
-              BASE_REF="${{ github.event.pull_request.base.sha }}"
-            else
+            BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+            if [ -z "$BASE_BRANCH" ]; then
               BASE_BRANCH="${{ github.base_ref || 'main' }}"
-              git fetch --no-tags --depth=1 origin "$BASE_BRANCH"
-              BASE_REF="origin/$BASE_BRANCH"
             fi
           else
-            # Scheduled or other callers: ensure origin/main exists and use it
-            git fetch --no-tags --depth=1 origin main || true
-            BASE_REF="$DEFAULT_BASE"
+            BASE_BRANCH="main"
           fi
           
-          # Compute changed files between base and HEAD
-          CHANGED_FILES=$(git diff --name-only "$BASE_REF"...HEAD || true)
-          echo "Changed files:" $CHANGED_FILES
+          # Ensure we have the base branch locally
+          git fetch --no-tags --depth=50 origin "$BASE_BRANCH" || true
+          BASE_REF="origin/$BASE_BRANCH"
+          
+          # Compute changed files between base and HEAD (two-dot to avoid symmetric diff errors)
+          CHANGED_FILES=$(git diff --name-only "$BASE_REF"..HEAD || true)
+          echo "Changed files: $CHANGED_FILES"
           
           # If modules changed, include all account/layer folders
-          if echo "$CHANGED_FILES" | grep -E '^infrastructure/modules(/|$)' >/dev/null 2>&1; then
+          if echo "$CHANGED_FILES" | grep -E '^infrastructure/modules(/|$)' > /dev/null 2>&1; then
             cd infrastructure/accounts
             DIRLIST=$(find . -type d -mindepth 3 -maxdepth 3 | jq -Rs 'split("\n") | (map(select(length > 0)) | map(split("/")[-3:])) | [ .[] | {accountName: .[0], accountId: .[1], subpath: .[2]} ]' | jq -c 'map(select(.subpath != null))')
             echo "$DIRLIST"
