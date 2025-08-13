@@ -9,7 +9,7 @@ on:
         type: string
       tofu_version:
         required: false
-        default: "1.9.1"
+        default: "1.8.8"
         type: string
       runs_on:
         required: false
@@ -71,10 +71,52 @@ jobs:
       - name: Generate json
         id: jsonmap
         run: |
-          cd infrastructure/accounts
-          DIRLIST=$(find . -type d -mindepth 3 -maxdepth 3 |jq -Rs 'split("\n")|(map(split("/")[-3:]))|[.[]|{accountName: .[0], accountId: .[1], subpath: .[2]}]'|jq -c 'map(select(.subpath != null))')
-          echo $DIRLIST
-          echo "MATRIX=$DIRLIST" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          
+          # Determine base revision to diff against
+          DEFAULT_BASE="origin/main"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Use the PR base SHA if available; otherwise fetch the base ref name
+            if [ -n "${{ github.event.pull_request.base.sha || '' }}" ]; then
+              BASE_REF="${{ github.event.pull_request.base.sha }}"
+            else
+              BASE_BRANCH="${{ github.base_ref || 'main' }}"
+              git fetch --no-tags --depth=1 origin "$BASE_BRANCH"
+              BASE_REF="origin/$BASE_BRANCH"
+            fi
+          else
+            # Scheduled or other callers: ensure origin/main exists and use it
+            git fetch --no-tags --depth=1 origin main || true
+            BASE_REF="$DEFAULT_BASE"
+          fi
+          
+          # Compute changed files between base and HEAD
+          CHANGED_FILES=$(git diff --name-only "$BASE_REF"...HEAD || true)
+          echo "Changed files:" $CHANGED_FILES
+          
+          # If modules changed, include all account/layer folders
+          if echo "$CHANGED_FILES" | grep -E '^infrastructure/modules(/|$)' >/dev/null 2>&1; then
+            cd infrastructure/accounts
+            DIRLIST=$(find . -type d -mindepth 3 -maxdepth 3 | jq -Rs 'split("\n") | (map(select(length > 0)) | map(split("/")[-3:])) | [ .[] | {accountName: .[0], accountId: .[1], subpath: .[2]} ]' | jq -c 'map(select(.subpath != null))')
+            echo "$DIRLIST"
+            echo "MATRIX=$DIRLIST" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Otherwise, only include account/layer folders that have changes
+          # Filter changed files under infrastructure/accounts/<accountName>/<accountId>/<subpath>/...
+          FILTERED=$(echo "$CHANGED_FILES" | awk -F'/' 'BEGIN{OFS="/"} $1=="infrastructure" && $2=="accounts" && NF>=5 {print $3,$4,$5}' | sort -u)
+          
+          if [ -z "$FILTERED" ]; then
+            echo "No account-level changes detected; returning empty matrix."
+            echo "MATRIX=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Build JSON objects for each unique triplet
+          JSON=$(printf "%s\n" "$FILTERED" | awk -F'/' '{printf "{\"accountName\":\"%s\",\"accountId\":\"%s\",\"subpath\":\"%s\"}\n", $1,$2,$3}' | jq -s -c '.')
+          echo "$JSON"
+          echo "MATRIX=$JSON" >> $GITHUB_OUTPUT
   drift-detect-completed:
     name: "Drift detect success"
     needs: display-environment
