@@ -76,181 +76,182 @@ jobs:
           echo $DIRLIST
           echo "MATRIX=$DIRLIST" >> $GITHUB_OUTPUT
   drift-detect-completed:
-   name: "Drift detect success"
-   needs: display-environment
-   runs-on: ubuntu-24.04
-   steps: 
-     - name: everythin succeeded
-       run: echo "All good!"
+    name: "Drift detect success"
+    needs: display-environment
+    runs-on: ubuntu-24.04
+    steps: 
+      - name: everythin succeeded
+        run: echo "All good!"
   
   display-environment: 
-   name: "drift"
-   runs-on: ubuntu-24.04
-   needs: createstructure 
-   permissions:
-     id-token: write
-     contents: read
-     packages: read
-     pull-requests: write
-   strategy:
-     fail-fast: false
-     matrix: 
-       config: ${{ fromJson(needs.createstructure.outputs.accountsAndLayers ) }}
-   env:
-     IDP_SLACK_REPORT_DRIFT_URL: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
-     IDP_SLACK_REPORT_ERROR_URL: ${{ secrets.IDP_SLACK_REPORT_ERROR_URL }}
-   steps:
-     - name: Checkout code
-       uses: actions/checkout@v4
-  
-     - name: Find default branch
-       if: github.event_name == 'schedule'
-       id: default_ref
-       run: |
-         branchfile="infrastructure/accounts/${{ matrix.config.accountName  }}/${{ matrix.config.accountId }}/branch.txt"
-         selected_branch="main"
-         if test -f $branchfile ; then 
-           selected_branch=$(cat $branchfile)
-         else 
-           echo "No branch file found at $branchfile."
-           echo "Using default branch: $selected_branch"
-         fi
-         echo "Github event name: ${{ github.event_name }}"
-         echo "Selected branch for drift detect: $selected_branch"
-         echo "refname=$selected_branch" >> $GITHUB_OUTPUT
-  
-     - name: Checkout code for branch ${{ steps.default_ref.outputs.refname }}
-       if: github.event_name == 'schedule'
-       uses: actions/checkout@v4
-       with:
-         ref: ${{ steps.default_ref.outputs.refname }}
-     - uses: opentofu/setup-opentofu@v1
-       with:
-         tofu_version: ${{ inputs.tofu_version }}
-     - name: Create tofu cache folder
-      run: |
-        mkdir -p .tofu-providers-cache
-  
-     - name: Restore tofu providers
-      uses: actions/cache@v4
-      with: 
-        path: .tofu-providers-cache
-        key: key-${{ hashFiles(format('infrastructure/accounts/{0}/{1}/{2}/.terraform.lock.hcl' ,matrix.config.accountName, matrix.config.accountId, matrix.config.subpath)) }}
-  
-     - name: Settings
-      id: settings
-      run: |
-        workdir="infrastructure/accounts/${{ matrix.config.accountName }}/${{ matrix.config.accountId }}/${{ matrix.config.subpath }}"
-        echo "workdir=${workdir}" >> $GITHUB_OUTPUT
-  
-     - name: Login OIDC
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: arn:aws:iam::${{ matrix.config.accountId }}:role/${{ inputs.role_to_assume }}
-        aws-region: eu-west-1
-        role-skip-session-tagging: true
-  
-     - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y jq
-  
-     - name: Create plan
-      continue-on-error: true
-      id: create_plan
-      env:
-        GITHUB_OWNER: jppol-idp
-        TF_VAR_argo_github_app_id: ${{ secrets.GH_APPS_REPO_APP_ID }}
-        TF_VAR_argo_github_app_installation_id: ${{ secrets.GH_APPS_REPO_APP_INSTALLATION_ID }}
-        TF_VAR_argo_github_app_pem: ${{ secrets.GH_APPS_REPO_PEM_CONTENTS }}
-        TF_VAR_provider_github_app_id: ${{ secrets.GH_MAIN_APP_ID }}
-        TF_VAR_provider_github_app_installation_id: ${{ secrets.GH_MAIN_APP_INSTALLATION_ID }}
-        TF_VAR_provider_github_app_pem: ${{ secrets.GH_MAIN_APP_PEM_CONTENTS }}
-        TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.tofu-providers-cache
-      run: |
-        set +e
-        cd ${{ steps.settings.outputs.workdir }}
-        tofu init
-        if ! tofu plan -out=plan.tmp -lock-timeout=300s -no-color; then
-          tofu_exitcode=1
-        else
-          changed=$(tofu show -json plan.tmp | jq -r '[(.resource_changes // [])[] | select((.change.actions | index("create")) or (.change.actions | index("update")) or (.change.actions | index("delete")))] | (length > 0)')
-          if [ "$changed" = "true" ]; then
-            tofu_exitcode=2
-          else
-            tofu_exitcode=0
-          fi
-        fi
-        echo "tofu exitcode: $tofu_exitcode"
-        echo "tofu_exitcode=$tofu_exitcode" >> $GITHUB_OUTPUT
-  
-     - name: Create human readable plan
-       id: create_human_readable_plan
-       continue-on-error: true
-       if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
-       run: |
-         cd ${{ steps.settings.outputs.workdir }}  
-         tofu show -no-color plan.tmp > plan.txt
-         # Double escape quotes. ho> Enforce newlines everywhere -> Four spaces to tabs -> Spaces to NBSP uncode
-         text_plan_slack=$(cat plan.txt |sed "s/\"/\\\\\"/g" |sed "s/\(.*\)/\1 \\\n/g" |sed "s/    /\\\t/g"| sed "s/ /\\\u00A0/g" |tail -c 1500 )
-         # Enforce newlines everywhere -> Four spaces to tabs -> Spaces to NBSP uncode
-         text_plan=$(cat plan.txt |sed "s/\(.*\)/\1 \\\n/g" )
-         echo "text_plan_slack<<TEXT_PLAN_SLACK" >> $GITHUB_OUTPUT
-         echo $text_plan_slack >> $GITHUB_OUTPUT
-         echo "TEXT_PLAN_SLACK" >> $GITHUB_OUTPUT
-         echo "text_plan<<TEXT_PLAN" >> $GITHUB_OUTPUT
-         echo $text_plan >> $GITHUB_OUTPUT
-         echo "TEXT_PLAN" >> $GITHUB_OUTPUT
-         tofu show -json ./plan.tmp >> ./planfile.json
-  
-     - name: Archive binary plan
-       if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
-       uses: actions/upload-artifact@v4
-       with:
-         name: ${{ matrix.config.accountId }}-${{ matrix.config.accountName }}-${{ matrix.config.subpath }}.plan
-         path: ${{ steps.settings.outputs.workdir }}/plan.tmp
-  
-     - name: Archive text plan
-       if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
-       uses: actions/upload-artifact@v4
-       with:
-         name: ${{ matrix.config.accountId }}-${{ matrix.config.accountName }}-${{ matrix.config.subpath }}.plan.txt
-         path: ${{ steps.settings.outputs.workdir }}/plan.txt
-  
-     - name: Comment on PR
-       if: github.event_name == 'pull_request' && fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
-       uses: liatrio/terraform-change-pr-commenter@v1.4.0
-       with:
-         json-file: ${{ steps.settings.outputs.workdir }}/planfile.json
+    name: "drift"
+    runs-on: ubuntu-24.04
+    needs: createstructure 
+    permissions:
+      id-token: write
+      contents: read
+      packages: read
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix: 
+        config: ${{ fromJson(needs.createstructure.outputs.accountsAndLayers ) }}
+    env:
+      IDP_SLACK_REPORT_DRIFT_URL: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
+      IDP_SLACK_REPORT_ERROR_URL: ${{ secrets.IDP_SLACK_REPORT_ERROR_URL }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-     - name: Post plan to Slack
-       uses: slackapi/slack-github-action@v2.0.0
-       if: github.event_name == 'schedule' && fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2 && env.IDP_SLACK_REPORT_DRIFT_URL != ''
-       with:
-         webhook: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
-         webhook-type: webhook-trigger
-         payload: |
-           branch: ${{ steps.default_ref.outputs.default_ref != '' && steps.default_ref.outputs.default_ref ||  github.ref }}  
-           path: "${{ steps.settings.outputs.workdir }}"
-           plan: "${{ steps.create_human_readable_plan.outputs.text_plan_slack }}"
-           details_url: "https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}"
+      - name: Find default branch
+        if: github.event_name == 'schedule'
+        id: default_ref
+        run: |
+          branchfile="infrastructure/accounts/${{ matrix.config.accountName  }}/${{ matrix.config.accountId }}/branch.txt"
+          selected_branch="main"
+          if test -f $branchfile ; then 
+            selected_branch=$(cat $branchfile)
+          else 
+            echo "No branch file found at $branchfile."
+            echo "Using default branch: $selected_branch"
+          fi
+          echo "Github event name: ${{ github.event_name }}"
+          echo "Selected branch for drift detect: $selected_branch"
+          echo "refname=$selected_branch" >> $GITHUB_OUTPUT
   
-     - name: Report missing slack config for drift
-       if: github.event_name == 'schedule' && fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2 && env.IDP_SLACK_REPORT_DRIFT_URL == ''
-       run: echo "Drift detected during scheduled run, but Slack is not used as the IDP_SLACK_REPORT_DRIFT_URL is undefined or empty"
-  
-     - name: Report missing slack config for errors
-       if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 1 && env.IDP_SLACK_REPORT_ERROR_URL == ''
-       run: echo "Error generating plan, but Slack is not used as the IDP_SLACK_REPORT_ERROR_URL is undefined or empty"
-  
-     - name: Post errormessage to slack 
-       uses: slackapi/slack-github-action@v2.0.0
-       if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 1 # Indicates error creating plan
-       with:
-         webhook: ${{ secrets.IDP_SLACK_REPORT_ERROR_URL }}
-         webhook-type: webhook-trigger
-         payload: |
-           branch: ${{ github.ref }}  
-           message: "There was an error creating a plan for this directory ${{ steps.settings.outputs.workdir }} Details here: https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}"
-     - name: Fail job if plan could not be created
-       id: general-failure
-       if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 1 # Indicates error creating plan
-       run: exit 1
+      - name: Checkout code for branch ${{ steps.default_ref.outputs.refname }}
+        if: github.event_name == 'schedule'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.default_ref.outputs.refname }}
+
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: ${{ inputs.tofu_version }}
+      - name: Create tofu cache folder
+        run: |
+          mkdir -p .tofu-providers-cache
+    
+      - name: Restore tofu providers
+        uses: actions/cache@v4
+        with: 
+          path: .tofu-providers-cache
+          key: key-${{ hashFiles(format('infrastructure/accounts/{0}/{1}/{2}/.terraform.lock.hcl' ,matrix.config.accountName, matrix.config.accountId, matrix.config.subpath)) }}
+   
+      - name: Settings
+        id: settings
+        run: |
+         workdir="infrastructure/accounts/${{ matrix.config.accountName }}/${{ matrix.config.accountId }}/${{ matrix.config.subpath }}"
+         echo "workdir=${workdir}" >> $GITHUB_OUTPUT
+   
+      - name: Login OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ matrix.config.accountId }}:role/${{ inputs.role_to_assume }}
+          aws-region: eu-west-1
+          role-skip-session-tagging: true
+ 
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
+   
+      - name: Create plan
+        continue-on-error: true
+        id: create_plan
+        env:
+          GITHUB_OWNER: jppol-idp
+          TF_VAR_argo_github_app_id: ${{ secrets.GH_APPS_REPO_APP_ID }}
+          TF_VAR_argo_github_app_installation_id: ${{ secrets.GH_APPS_REPO_APP_INSTALLATION_ID }}
+          TF_VAR_argo_github_app_pem: ${{ secrets.GH_APPS_REPO_PEM_CONTENTS }}
+          TF_VAR_provider_github_app_id: ${{ secrets.GH_MAIN_APP_ID }}
+          TF_VAR_provider_github_app_installation_id: ${{ secrets.GH_MAIN_APP_INSTALLATION_ID }}
+          TF_VAR_provider_github_app_pem: ${{ secrets.GH_MAIN_APP_PEM_CONTENTS }}
+          TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.tofu-providers-cache
+        run: |
+          set +e
+          cd ${{ steps.settings.outputs.workdir }}
+          tofu init
+          if ! tofu plan -out=plan.tmp -lock-timeout=300s -no-color; then
+            tofu_exitcode=1
+          else
+            changed=$(tofu show -json plan.tmp | jq -r '[(.resource_changes // [])[] | select((.change.actions | index("create")) or (.change.actions | index("update")) or (.change.actions | index("delete")))] | (length > 0)')
+            if [ "$changed" = "true" ]; then
+              tofu_exitcode=2
+            else
+              tofu_exitcode=0
+            fi
+          fi
+          echo "tofu exitcode: $tofu_exitcode"
+          echo "tofu_exitcode=$tofu_exitcode" >> $GITHUB_OUTPUT
+   
+      - name: Create human readable plan
+        id: create_human_readable_plan
+        continue-on-error: true
+        if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
+        run: |
+          cd ${{ steps.settings.outputs.workdir }}  
+          tofu show -no-color plan.tmp > plan.txt
+          # Double escape quotes. ho> Enforce newlines everywhere -> Four spaces to tabs -> Spaces to NBSP uncode
+          text_plan_slack=$(cat plan.txt |sed "s/\"/\\\\\"/g" |sed "s/\(.*\)/\1 \\\n/g" |sed "s/    /\\\t/g"| sed "s/ /\\\u00A0/g" |tail -c 1500 )
+          # Enforce newlines everywhere -> Four spaces to tabs -> Spaces to NBSP uncode
+          text_plan=$(cat plan.txt |sed "s/\(.*\)/\1 \\\n/g" )
+          echo "text_plan_slack<<TEXT_PLAN_SLACK" >> $GITHUB_OUTPUT
+          echo $text_plan_slack >> $GITHUB_OUTPUT
+          echo "TEXT_PLAN_SLACK" >> $GITHUB_OUTPUT
+          echo "text_plan<<TEXT_PLAN" >> $GITHUB_OUTPUT
+          echo $text_plan >> $GITHUB_OUTPUT
+          echo "TEXT_PLAN" >> $GITHUB_OUTPUT
+          tofu show -json ./plan.tmp >> ./planfile.json
+   
+      - name: Archive binary plan
+        if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.accountId }}-${{ matrix.config.accountName }}-${{ matrix.config.subpath }}.plan
+          path: ${{ steps.settings.outputs.workdir }}/plan.tmp
+   
+      - name: Archive text plan
+        if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.accountId }}-${{ matrix.config.accountName }}-${{ matrix.config.subpath }}.plan.txt
+          path: ${{ steps.settings.outputs.workdir }}/plan.txt
+   
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
+        uses: liatrio/terraform-change-pr-commenter@v1.4.0
+        with:
+          json-file: ${{ steps.settings.outputs.workdir }}/planfile.json
+
+      - name: Post plan to Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        if: github.event_name == 'schedule' && fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2 && env.IDP_SLACK_REPORT_DRIFT_URL != ''
+        with:
+          webhook: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
+          webhook-type: webhook-trigger
+          payload: |
+            branch: ${{ steps.default_ref.outputs.default_ref != '' && steps.default_ref.outputs.default_ref ||  github.ref }}  
+            path: "${{ steps.settings.outputs.workdir }}"
+            plan: "${{ steps.create_human_readable_plan.outputs.text_plan_slack }}"
+            details_url: "https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}"
+   
+      - name: Report missing slack config for drift
+        if: github.event_name == 'schedule' && fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2 && env.IDP_SLACK_REPORT_DRIFT_URL == ''
+        run: echo "Drift detected during scheduled run, but Slack is not used as the IDP_SLACK_REPORT_DRIFT_URL is undefined or empty"
+   
+      - name: Report missing slack config for errors
+        if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 1 && env.IDP_SLACK_REPORT_ERROR_URL == ''
+        run: echo "Error generating plan, but Slack is not used as the IDP_SLACK_REPORT_ERROR_URL is undefined or empty"
+   
+      - name: Post errormessage to slack 
+        uses: slackapi/slack-github-action@v2.0.0
+        if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 1 # Indicates error creating plan
+        with:
+          webhook: ${{ secrets.IDP_SLACK_REPORT_ERROR_URL }}
+          webhook-type: webhook-trigger
+          payload: |
+            branch: ${{ github.ref }}  
+            message: "There was an error creating a plan for this directory ${{ steps.settings.outputs.workdir }} Details here: https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}"
+      - name: Fail job if plan could not be created
+        id: general-failure
+        if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 1 # Indicates error creating plan
+        run: exit 1
