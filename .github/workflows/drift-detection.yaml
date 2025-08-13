@@ -73,6 +73,15 @@ jobs:
         run: |
           set -euo pipefail
           
+          # If scheduled run, include all account/layer folders
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            cd infrastructure/accounts
+            DIRLIST=$(find . -type d -mindepth 3 -maxdepth 3 | jq -Rs 'split("\n") | (map(select(length > 0)) | map(split("/")[-3:])) | [ .[] | {accountName: .[0], accountId: .[1], subpath: .[2]} ]' | jq -c 'map(select(.subpath != null))')
+            echo "$DIRLIST"
+            echo "MATRIX=$DIRLIST" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
           # Determine and fetch base branch to diff against
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
