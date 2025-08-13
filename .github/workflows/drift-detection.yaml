@@ -126,7 +126,7 @@ jobs:
   drift-detect-completed:
     name: "Drift detect success"
     needs: display-environment
-    if: needs.display-environment.result == 'success' || needs.display-environment.result == 'skipped'
+    if: ${{ always() && (needs.display-environment.result == 'success' || needs.display-environment.result == 'skipped') }}
     runs-on: ubuntu-24.04
     steps: 
       - name: everythin succeeded
