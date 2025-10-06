@@ -99,10 +99,7 @@ jobs:
           # Compute changed files between base and HEAD (two-dot to avoid symmetric diff errors)
           CHANGED_FILES=$(git diff --name-only "$BASE_REF"..HEAD || true)
           echo "Changed files: $CHANGED_FILES"
-          CHANGED_FILES=$(echo $CHANGED_FILES | grep "\/[0-9]\+\/[0-9][0-9][^\/]\+$" )
-          echo "Changed files filtered: $CHANGED_FILES"
-
-
+          
           # If modules changed, include all account/layer folders; ie account id and numbered path.
           if echo "$CHANGED_FILES" | grep -E '^infrastructure/modules(/|$)' > /dev/null 2>&1; then
             cd infrastructure/accounts
@@ -125,7 +122,7 @@ jobs:
           # Otherwise, only include account/layer folders that have changes
           # Filter changed files under infrastructure/accounts/<accountName>/<accountId>/<subpath>/...
           # Only allow folders starting with two numbers that are also subfolders of a folder named with a number; ie account id and numbered path.
-          FILTERED=$(echo "$CHANGED_FILES" | awk -F'/' 'BEGIN{OFS="/"} $1=="infrastructure" && $2=="accounts" && NF>=5 {print $3,$4,$5}' | sort -u)
+          FILTERED=$(echo "$CHANGED_FILES" | grep "\/[0-9]\+\/[0-9][0-9][^\/]\+$" | awk -F'/' 'BEGIN{OFS="/"} $1=="infrastructure" && $2=="accounts" && NF>=5 {print $3,$4,$5}' | sort -u)
           
           if [ -z "$FILTERED" ]; then
             echo "No account-level changes detected; returning empty matrix."
