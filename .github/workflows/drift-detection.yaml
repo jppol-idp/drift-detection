@@ -71,8 +71,6 @@ jobs:
       - name: Generate json
         id: jsonmap
         run: |
-          set -euo pipefail
-          
           # If scheduled run, include all account/layer folders
           if [ "${{ github.event_name }}" = "schedule" ]; then
             cd infrastructure/accounts
@@ -100,6 +98,7 @@ jobs:
           CHANGED_FILES=$(git diff --name-only "$BASE_REF"..HEAD || true)
           echo "Changed files: $CHANGED_FILES"
           
+          echo "Testing if modules are changed."
           # If modules changed, include all account/layer folders; ie account id and numbered path.
           if echo "$CHANGED_FILES" | grep -E '^infrastructure/modules(/|$)' > /dev/null 2>&1; then
             cd infrastructure/accounts
@@ -109,6 +108,7 @@ jobs:
             exit 0
           fi
 
+          echo "Testing if account-settings are changed."
           # If account-settings changed for an account we run drift detect for everythin 
           # (This should only be the current acccount, but better include too many folder.)
           if echo "$CHANGED_FILES" | grep -E '^infrastructure/.*/account-settings/.*' > /dev/null 2>&1; then
@@ -118,7 +118,8 @@ jobs:
             echo "MATRIX=$DIRLIST" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
+          echo "Finding changed folders."
           # Otherwise, only include account/layer folders that have changes
           # Filter changed files under infrastructure/accounts/<accountName>/<accountId>/<subpath>/...
           # Only allow folders starting with two numbers that are also subfolders of a folder named with a number; ie account id and numbered path.
