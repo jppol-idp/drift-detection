@@ -111,7 +111,7 @@ jobs:
           
           # Otherwise, only include account/layer folders that have changes
           # Filter changed files under infrastructure/accounts/<accountName>/<accountId>/<subpath>/...
-          FILTERED=$(echo "$CHANGED_FILES" | awk -F'/' 'BEGIN{OFS="/"} $1=="infrastructure" && $2=="accounts" && NF>=5 {print $3,$4,$5}' | sort -u)
+          FILTERED=$(echo "$CHANGED_FILES" | awk -F'/' 'BEGIN{OFS="/"} $1=="infrastructure" && $2=="accounts" && NF>=5 {print $3,$4,$5}' | grep -v "branch.txt$" | sort -u)
           
           if [ -z "$FILTERED" ]; then
             echo "No account-level changes detected; returning empty matrix."
