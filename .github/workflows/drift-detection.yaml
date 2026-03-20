@@ -229,7 +229,6 @@ jobs:
           TF_VAR_provider_github_app_installation_id: ${{ secrets.GH_MAIN_APP_INSTALLATION_ID }}
           TF_VAR_provider_github_app_pem: ${{ secrets.GH_MAIN_APP_PEM_CONTENTS }}
           TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.tofu-providers-cache
-          GH_TOKEN: ${{ github.token }}
         run: |
           set +e
           cd ${{ steps.settings.outputs.workdir }}
@@ -294,6 +293,8 @@ jobs:
 
       - name: Create/update issue for changes
         id: create_update_issue 
+        env:
+          GH_TOKEN: ${{ github.token }}
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2 #&& github.event_name == 'schedule' 
         run: |
             issueTitle="${{ steps.issue_title.outputs.issueTitle }}"
@@ -312,6 +313,8 @@ jobs:
 
       - name: Close issue for changes
         id: close_update_issue 
+        env:
+          GH_TOKEN: ${{ github.token }}
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 0 #&& github.event_name == 'schedule' 
         run: |
             issueTitle="${{ steps.issue_title.outputs.issueTitle }}"
