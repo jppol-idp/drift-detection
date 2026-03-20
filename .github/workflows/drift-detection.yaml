@@ -289,7 +289,7 @@ jobs:
         id: issue_title
         run: | 
             issueTitle="Changes in in account ${{ matrix.config.accountId }} - ${{ matrix.config.subpath }}"
-            echo "issueTitle='$issueTitle'" >> $GITHUB_OUTPUT
+            echo "issueTitle=$issueTitle" >> $GITHUB_OUTPUT
 
       - name: Create/update issue for changes
         id: create_update_issue 
