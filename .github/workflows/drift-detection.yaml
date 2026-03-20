@@ -321,7 +321,7 @@ jobs:
         run: |
             issueTitle="${{ steps.issue_title.outputs.issueTitle }}"
             issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r ".[] | select(.title == \"$issueTitle\") | .number")
-            if [ ! -z "$issueNumber" ]; then 
+            if [[ "$issueNumber" != "" ]]; then 
               gh issue close $issueNumber -c "Previously detected changes are no longer active. (This can be due to a state change compared to original diff."
             fi
 
