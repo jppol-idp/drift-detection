@@ -149,6 +149,7 @@ jobs:
     name: "drift"
     runs-on: ubuntu-24.04
     needs: createstructure 
+    shell: bash
     if: ${{ needs.createstructure.outputs.accountsAndLayers != '' && needs.createstructure.outputs.accountsAndLayers != '[]' }}
     permissions:
       id-token: write
@@ -293,6 +294,7 @@ jobs:
 
       - name: Create/update issue for changes
         id: create_update_issue 
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2 #&& github.event_name == 'schedule' 
@@ -313,6 +315,7 @@ jobs:
 
       - name: Close issue for changes
         id: close_update_issue 
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 0 #&& github.event_name == 'schedule' 
