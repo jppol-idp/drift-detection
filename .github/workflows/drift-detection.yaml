@@ -207,7 +207,7 @@ jobs:
          echo "workdir=${workdir}" >> $GITHUB_OUTPUT
    
       - name: Login OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{ matrix.config.accountId }}:role/${{ inputs.role_to_assume }}
           aws-region: eu-west-1
@@ -266,14 +266,14 @@ jobs:
    
       - name: Archive binary plan
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.config.accountId }}-${{ matrix.config.accountName }}-${{ matrix.config.subpath }}.plan
           path: ${{ steps.settings.outputs.workdir }}/plan.tmp
    
       - name: Archive text plan
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.config.accountId }}-${{ matrix.config.accountName }}-${{ matrix.config.subpath }}.plan.txt
           path: ${{ steps.settings.outputs.workdir }}/plan.txt
