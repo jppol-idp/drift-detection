@@ -301,7 +301,7 @@ jobs:
         run: |
             issueTitle="${{ steps.issue_title.outputs.issueTitle }}"
             issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r ".[] | select(.title == \"$issueTitle\") | .number")
-            if [ -z "$issueNumber" ]; then 
+            if [[ -z "$issueNumber" ]]; then
               gh issue create --title "$issueTitle"
               issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r ".[] | select(.title == \"$issueTitle\") | .number")
             fi
@@ -310,7 +310,7 @@ jobs:
             plan="${{ steps.create_human_readable_plan.outputs.text_plan_slack }}"
             details_url="https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}"
 
-            body="Comparing $path to branch '$branch' for account '${{ matrix.account.configId }}' - current state did not match branch when evaluating $path."
+            body="Comparing $path to branch '$branch' for account '${{ matrix.config.accountId }}' - current state did not match branch when evaluating $path."
             gh issue edit "$issueNumber" --body "$body"
 
       - name: Close issue for changes
