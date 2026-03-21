@@ -300,7 +300,7 @@ jobs:
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2 #&& github.event_name == 'schedule' 
         run: |
             issueTitle="${{ steps.issue_title.outputs.issueTitle }}"
-            issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r ".[] | select(.title == \"$issueTitle\") | .number")
+            issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r --arg t "$issueTitle" '.[] | select(.title == $t) | .number')
             if [[ -z "$issueNumber" ]]; then
               gh issue create --title "$issueTitle"
               issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r ".[] | select(.title == \"$issueTitle\") | .number")
@@ -321,7 +321,7 @@ jobs:
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 0 #&& github.event_name == 'schedule' 
         run: |
             issueTitle="${{ steps.issue_title.outputs.issueTitle }}"
-            issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r ".[] | select(.title == \\\"$issueTitle\\\") | .number")
+            issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r --arg t "$issueTitle" '.[] | select(.title == $t) | .number')
             if [[ -n "$issueNumber" ]]; then
               gh issue close "$issueNumber" -c "Previously detected changes are no longer active. (This can be due to a state change compared to original diff)."
             fi
