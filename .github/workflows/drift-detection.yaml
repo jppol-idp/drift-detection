@@ -289,7 +289,7 @@ jobs:
       - name: Issue title
         id: issue_title
         run: | 
-            issueTitle="Changes in in account ${{ matrix.config.accountId }} - ${{ matrix.config.subpath }}"
+            issueTitle="Changes in account ${{ matrix.config.accountId }} - ${{ matrix.config.subpath }}"
             echo "issueTitle=$issueTitle" >> $GITHUB_OUTPUT
 
       - name: Create/update issue for changes
@@ -307,7 +307,7 @@ jobs:
             body="Comparing $path to branch '$branch' for account '${{ matrix.config.accountId }}' - current state did not match branch when evaluating $path."
 
             if [[ -z "$issueNumber" ]]; then
-              gh issue create --title "$issueTitle" --body $body
+              gh issue create --title "$issueTitle" --body "$body"
             else
               gh issue edit "$issueNumber" --body "$body"
             fi
