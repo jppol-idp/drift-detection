@@ -161,8 +161,8 @@ jobs:
       matrix: 
         config: ${{ fromJson(needs.createstructure.outputs.accountsAndLayers ) }}
     env:
-      IDP_SLACK_REPORT_DRIFT_URL: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
-      IDP_SLACK_REPORT_ERROR_URL: ${{ secrets.IDP_SLACK_REPORT_ERROR_URL }}
+      IDP_SLACK_REPORT_DRIFT_URL: ${{ secrets.IDP_SLACK_REPORT_DRIFT_URL }}
+      IDP_SLACK_REPORT_ERROR_URL: ${{ secrets.IDP_SLACK_REPORT_ERROR_URL }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
