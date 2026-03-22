@@ -189,7 +189,7 @@ jobs:
         with:
           ref: ${{ steps.default_ref.outputs.refname }}
 
-      - uses: opentofu/setup-opentofu@v1
+      - uses: opentofu/setup-opentofu@v2
         with:
           tofu_version: ${{ inputs.tofu_version }}
       - name: Create tofu cache folder
@@ -197,7 +197,7 @@ jobs:
           mkdir -p .tofu-providers-cache
     
       - name: Restore tofu providers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with: 
           path: .tofu-providers-cache
           key: key-${{ hashFiles(format('infrastructure/accounts/{0}/{1}/{2}/.terraform.lock.hcl' ,matrix.config.accountName, matrix.config.accountId, matrix.config.subpath)) }}
