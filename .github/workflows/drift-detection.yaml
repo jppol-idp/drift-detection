@@ -292,7 +292,7 @@ jobs:
         id: issue_title
         run: | 
             subpath="${{ matrix.config.subpath }}"
-            layer=$(eche $subpath|sed -s 's/^.*\/\(.*\)/\1/g')
+            layer=$(echo $subpath|sed -s 's/^.*\/\(.*\)/\1/g')
             issueTitle="Changes in account ${{ matrix.config.accountName }} - ${{ matrix.config.accountId }} - $layer"
             echo "issueTitle=$issueTitle" >> $GITHUB_OUTPUT
             echo "layer=$layer" >> $GITHUB_OUTPUT
@@ -315,8 +315,11 @@ jobs:
             body="# Drift found in $branch"$'\n'
             body+="Changes found when comparing $path to branch '$branch' for account '${{ matrix.config.accountId }}'"$'\n'
             body+="## Plan summary"$'\n'
-            body+="$summary"$'\n'
-            body+="You can download [the text plan here](${{ steps.archive_text_plan.outputs.artifacts-url }})."$'\n'
+            body+="### $summary "$'\n'
+            body+="You can download [the plan as a text file here](${{ steps.archive_text_plan.outputs.artifact-url }})."$'\n'
+            body+="Drift was detected by [this action invokation]($details_url)."$'\n'
+            body+="### info "$'\n'
+            body+="**Please don't change information below.** "$'\n'
             body+="\`\`\`info"$'\n'
             body+="accountName: ${{ matrix.config.accountName }}"$'\n'
             body+="accountId: ${{ matrix.config.accountId }}"$'\n'
@@ -332,7 +335,6 @@ jobs:
             else
               gh issue edit "$issueNumber" --body "$body"
             fi
-
 
       - name: Close issue for changes
         id: close_update_issue 
