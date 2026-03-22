@@ -275,6 +275,7 @@ jobs:
           path: ${{ steps.settings.outputs.workdir }}/plan.tmp
    
       - name: Archive text plan
+        id: archive_text_plan
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
         uses: actions/upload-artifact@v6
         with:
@@ -308,15 +309,20 @@ jobs:
             branch="${{ steps.default_ref.outputs.default_ref != '' && steps.default_ref.outputs.default_ref ||  github.ref }}"
             path="${{ steps.settings.outputs.workdir }}"
             details_url="https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}"
+            summary=$(tail  -q -n 2 plan.txt)
 
             body="# Drift found in $branch"$'\n'
             body+="Changes found when comparing $path to branch '$branch' for account '${{ matrix.config.accountId }}'"$'\n'
+            body+="## Plan summary"$'\n'
+            body+="$summary"$'\n'
+            body+="You can download [the text plan here](${{ steps.archive_text_plan.outputs.artifacts-url }})."$'\n'
             body+="\`\`\`info"$'\n'
             body+="accountName: ${{ matrix.config.accountName }}"$'\n'
             body+="accountId: ${{ matrix.config.accountId }}"$'\n'
             body+="subpath: ${{ matrix.config.subpath }}"$'\n'
             body+="branch: $branch"$'\n'
             body+="artifactId: ${{ steps.archive_binary_plan.outputs.artifact-id }}"$'\n'
+            body+="artifactUrl: ${{ steps.archive_binary_plan.outputs.artifact-url }}"$'\n'
             body+="\`\`\`"$'\n'
 
             issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r --arg t "$issueTitle" '.[] | select(.title == $t) | .number')
