@@ -317,7 +317,7 @@ jobs:
             body+="subpath: ${{ matrix.config.subpath }}"$'\n'
             body+="branch: $branch"$'\n'
             body+="artifactId: ${{ steps.archive_binary_plan.outputs.artifact-id }}"$'\n'
-            body+="\`\`\`$'\n'
+            body+="\`\`\`"$'\n'
 
             issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r --arg t "$issueTitle" '.[] | select(.title == $t) | .number')
             if [[ -z "$issueNumber" ]]; then
