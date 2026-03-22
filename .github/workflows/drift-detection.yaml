@@ -267,6 +267,7 @@ jobs:
           tofu show -json ./plan.tmp >> ./planfile.json
    
       - name: Archive binary plan
+        id: archive_binary_plan
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2
         uses: actions/upload-artifact@v6
         with:
@@ -289,8 +290,11 @@ jobs:
       - name: Issue title
         id: issue_title
         run: | 
-            issueTitle="Changes in account ${{ matrix.config.accountId }} - ${{ matrix.config.subpath }}"
+            subpath="${{ matrix.config.subpath }}"
+            layer=$(eche $subpath|sed -s 's/^.*\/\(.*\)/\1/g')
+            issueTitle="Changes in account ${{ matrix.config.accountName }} - ${{ matrix.config.accountId }} - $layer"
             echo "issueTitle=$issueTitle" >> $GITHUB_OUTPUT
+            echo "layer=$layer" >> $GITHUB_OUTPUT
 
       - name: Create/update issue for changes
         id: create_update_issue 
@@ -300,12 +304,22 @@ jobs:
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2 #&& github.event_name == 'schedule' 
         run: |
             issueTitle="${{ steps.issue_title.outputs.issueTitle }}"
-            issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r --arg t "$issueTitle" '.[] | select(.title == $t) | .number')
+            layer="${{ steps.issue_title.outputs.layer }}"
             branch="${{ steps.default_ref.outputs.default_ref != '' && steps.default_ref.outputs.default_ref ||  github.ref }}"
             path="${{ steps.settings.outputs.workdir }}"
             details_url="https://github.com/jppol-idp/idp-main-setup/actions/runs/${{ github.run_id }}"
-            body="Comparing $path to branch '$branch' for account '${{ matrix.config.accountId }}' - current state did not match branch when evaluating $path."
 
+            body="# Drift found in $branch"$'\n'
+            body+="Changes found when comparing $path to branch '$branch' for account '${{ matrix.config.accountId }}'"$'\n'
+            body+="\`\`\`info"$'\n'
+            body+="accountName: ${{ matrix.config.accountName }}"$'\n'
+            body+="accountId: ${{ matrix.config.accountId }}"$'\n'
+            body+="subpath: ${{ matrix.config.subpath }}"$'\n'
+            body+="branch: $branch"$'\n'
+            body+="artifactId: ${{ steps.archive_binary_plan.outputs.artifact-id }}"$'\n'
+            body+="\`\`\`$'\n'
+
+            issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r --arg t "$issueTitle" '.[] | select(.title == $t) | .number')
             if [[ -z "$issueNumber" ]]; then
               gh issue create --title "$issueTitle" --body "$body"
             else
