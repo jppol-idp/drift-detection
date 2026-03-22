@@ -331,9 +331,9 @@ jobs:
 
             issueNumber=$(gh issue list --json title,state,id,number --state OPEN | jq -r --arg t "$issueTitle" '.[] | select(.title == $t) | .number')
             if [[ -z "$issueNumber" ]]; then
-              gh issue create --title "$issueTitle" --body "$body"
+              gh issue create --title "$issueTitle" --body "$body" --label drift-detection
             else
-              gh issue edit "$issueNumber" --body "$body"
+              gh issue edit "$issueNumber" --body "$body" --add-label drift-detection
             fi
 
       - name: Close issue for changes
