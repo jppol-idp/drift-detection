@@ -304,6 +304,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         if: fromJSON(steps.create_plan.outputs.tofu_exitcode) == 2 #&& github.event_name == 'schedule' 
         run: |
+            cd ${{ steps.settings.outputs.workdir }}  
             issueTitle="${{ steps.issue_title.outputs.issueTitle }}"
             layer="${{ steps.issue_title.outputs.layer }}"
             branch="${{ steps.default_ref.outputs.default_ref != '' && steps.default_ref.outputs.default_ref ||  github.ref }}"
